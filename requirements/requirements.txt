@@ -1,0 +1,37 @@
+==========requirements.txt — 项目 Python 运行时依赖=================
+#说明：• 仅列出通过 pip 安装的第三方包；系统级依赖需在 README 标注。
+#     • 如需可选功能（DTLS、开发工具），可另建 extras-optional.txt /requirements-dev.txt。
+== Core runtime ==
+pillow>=10.0          # 图片隐写（common/stego）
+pyaudio>=0.2.14       # 音频采集与播放（client/voice）
+portalocker>=2.8      # 跨平台文件锁（auth, directory）
+== In‑process crypto (可选，如使用系统 OpenSSL CLI 可删)==cryptography>=42.0    # RSA/ECDH/AES-GCM 等
+== DTLS / SRTP (可选)==aioquic>=0.9.26       # DTLS、QUIC 库
+== 热更新 settings.ini (可选)==watchdog>=3.0         # 文件系统监听
+== Dev / Test 工具 (可选)==black                 # 代码格式化器
+pytest                # 单元测试框架
+----------------------------Usage-----------------------
+python -m pip install --upgrade pippython -m pip install -r requirements.txt
+#若要额外安装可选模块：
+python -m pip install -r extras-optional.txtpython -m pip install -r requirements-dev.txt
+==================================================================
+
+
+
+# === 核心功能 ===
+cryptography>=42.0         # 公钥/对称加密、ECDH 派生
+pillow>=10.0               # 图片隐写（stego.py）
+pyaudio>=0.2.14            # 语音捕获/播放
+
+# === 并发文件读写锁（可选，但推荐） ===
+portalocker>=2.8           # 跨平台文件锁，auth.py / directory.py 用
+
+# === 动态配置热加载（可选） ===
+watchdog>=3.0              # settings.ini 变更监听
+
+# === 若使用 DTLS / SRTP (可选) ===
+aioquic>=0.9.26            # open_dtls 实现时可用
+
+# === 开发工具（非运行时必需，可放到 dev-requirements） ===
+black                      # 代码格式化
+pytest                     # 单元测试
