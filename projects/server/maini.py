@@ -1,6 +1,12 @@
-# server/main.py
 import argparse, asyncio
-from server import core           # 需要你补 core.run_server()
+import sys
+from pathlib import Path
+
+# 添加项目根目录到Python路径
+project_root = str(Path(__file__).resolve().parents[1])
+sys.path.append(project_root)
+
+from server import core  # 绝对导入
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

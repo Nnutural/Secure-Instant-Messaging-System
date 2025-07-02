@@ -1,144 +1,399 @@
-# ──────────────────────────────────────────────────────────────
-# client/core.py — 客户端主循环 / 网络调度（接口骨架 + 实现步骤）
-#
-# ⚠️ 本文件仅包含函数签名和“TODO 步骤清单”注释；业务逻辑留空
-#
-# 依赖：asyncio、common.config、common.crypto_tls、client.messenger 等
-# ──────────────────────────────────────────────────────────────
+"""
+服务端核心模块
 
-from __future__ import annotations
+提供WebSocket服务器和消息处理功能
+"""
 
 import asyncio
-from typing import Dict, Tuple, List
+import websockets
+import json
+import logging
+import uuid
+from typing import Dict, Set, Optional, Any
+from datetime import datetime
+from websockets.server import WebSocketServerProtocol
+from websockets.exceptions import ConnectionClosed
 
-from common.config import SERVER_HOST, SERVER_PORT, VERIFY_PEER
-from common.crypto_tls import open_tls, open_dtls  # 占位导入
+import sys
+from pathlib import Path
 
-# 类型别名
-StreamReader = asyncio.StreamReader
-StreamWriter = asyncio.StreamWriter
-P2PChannel   = Tuple[StreamReader, StreamWriter]
-UserEndpoint = Tuple[str, str, int]   # (username, ip, port)
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
-# ──────────────────────────────────────────────────────────────
-# 全局状态
-# ──────────────────────────────────────────────────────────────
-_active_channels: Dict[str, P2PChannel] = {}   # peer -> channel
-_background_tasks: List[asyncio.Task] = []     # 需要统一取消的协程
+from common.config import SERVER_HOST, SERVER_PORT
+from common.database import DatabaseManager
+from server import auth, directory, history
+from server.shema import *
 
-# ======================================================================
-# 1. 客户端入口
-# ======================================================================
+logger = logging.getLogger(__name__)
 
-async def boot() -> None:
-    """客户端启动入口 — 步骤
+# 全局状态管理
+class ServerState:
+    def __init__(self):
+        self.connections: Dict[str, WebSocketServerProtocol] = {}  # session_id -> websocket
+        self.user_sessions: Dict[str, str] = {}  # username -> session_id
+        self.online_users: Set[str] = set()
+        self.db = DatabaseManager()
 
-    1. 记录启动日志，打印所用配置。
-    2. `reader, writer = await connect_server()` 建立 TLS 到集中服务器。
-    3. `task_server = asyncio.create_task(server_recv_loop(reader))`
-    4. `task_heartbeat = asyncio.create_task(heartbeat_task(writer))`
-    5. 启动本地 P2P 监听：`task_listener = asyncio.create_task(p2p_listener('0.0.0.0', 0))`
-    6. 将上述任务 append 至 `_background_tasks`。
-    7. 启动 UI 主循环（若使用 Qt/Tk，需在独立线程或异步桥）。
-    8. 捕获 *KeyboardInterrupt* / UI 关闭事件 → 调 `shutdown()`。
-    """
-    pass
+server_state = ServerState()
 
-# ======================================================================
-# 2. 与集中服务器通信
-# ======================================================================
+class MessageHandler:
+    """消息处理器"""
+    
+    def __init__(self, websocket: WebSocketServerProtocol, session_id: str):
+        self.websocket = websocket
+        self.session_id = session_id
+        self.username: Optional[str] = None
+        self.db = server_state.db
+    
+    async def handle_message(self, message: dict):
+        """处理客户端消息"""
+        try:
+            msg_type = message.get('tag')
+            
+            if msg_type == MsgTag.Login.value:
+                await self.handle_login(LoginMsg(**message))
+            elif msg_type == MsgTag.Register.value:
+                await self.handle_register(RegisterMsg(**message))
+            elif msg_type == MsgTag.GetDirectory.value:
+                await self.handle_fetch_online_list()
+            elif msg_type == MsgTag.Message.value:
+                await self.handle_send_message(MessageMsg(**message))
+            elif msg_type == MsgTag.GetHistory.value:
+                await self.handle_fetch_history(GetHistoryMsg(**message))
+            elif msg_type == MsgTag.Logout.value:
+                await self.handle_logout()
+            else:
+                await self.send_error(f"未知消息类型: {msg_type}")
+                
+        except Exception as e:
+            logger.error(f"处理消息失败: {e}")
+            await self.send_error(f"消息处理错误: {str(e)}")
+    
+    async def handle_login(self, msg: LoginMsg):
+        """处理登录"""
+        try:
+            # 验证用户凭据
+            if not auth.verify_password(msg.username, msg.secret):
+                await self.send_response(FailLoginMsg(
+                    error_type="用户名或密码错误"
+                ))
+                return
+            
+            # 获取用户信息
+            user = self.db.get_user_by_username(msg.username)
+            if not user:
+                await self.send_response(FailLoginMsg(
+                    error_type="用户不存在"
+                ))
+                return
+            
+            # 更新用户状态
+            self.username = msg.username
+            server_state.user_sessions[msg.username] = self.session_id
+            server_state.online_users.add(msg.username)
+            
+            # 更新数据库状态
+            client_info = getattr(self.websocket, 'remote_address', None)
+            ip = client_info[0] if client_info else '127.0.0.1'
+            self.db.update_user_login_status(user['user_id'], True, ip, 0)
+            
+            # 创建会话
+            self.db.create_session(self.session_id, user['user_id'], str(id(self.websocket)))
+            
+            await self.send_response(SuccessLoginMsg(
+                username=msg.username,
+                user_id=user['user_id']
+            ))
+            
+            # 广播用户上线
+            await self.broadcast_user_status_change()
+            
+            logger.info(f"用户 {msg.username} 登录成功")
+            
+        except Exception as e:
+            logger.error(f"登录处理失败: {e}")
+            await self.send_error("登录失败")
+    
+    async def handle_register(self, msg: RegisterMsg):
+        """处理注册"""
+        try:
+            # 注册用户
+            success = auth.register_user(
+                username=msg.username,
+                password=msg.secret,
+                email=msg.email,
+                pubkey_pem=""
+            )
+            
+            if success:
+                # 获取新用户信息
+                user = self.db.get_user_by_username(msg.username)
+                await self.send_response(SuccessRegisterMsg(
+                    username=msg.username,
+                    user_id=user['user_id'] if user else 0
+                ))
+                logger.info(f"用户 {msg.username} 注册成功")
+            else:
+                await self.send_response(FailRegisterMsg(
+                    error_type="注册失败"
+                ))
+                
+        except ValueError as e:
+            await self.send_response(FailRegisterMsg(
+                error_type=str(e)
+            ))
+        except Exception as e:
+            logger.error(f"注册处理失败: {e}")
+            await self.send_error("注册失败")
+    
+    async def handle_fetch_online_list(self):
+        """处理获取在线用户列表"""
+        try:
+            if not self.username:
+                await self.send_error("未登录")
+                return
+            
+            # 获取用户信息
+            user = self.db.get_user_by_username(self.username)
+            if not user:
+                await self.send_error("用户不存在")
+                return
+            
+            # 获取在线好友
+            online_friends = self.db.get_online_friends(user['user_id'])
+            
+            # 转换为JSON格式
+            friends_data = []
+            for friend in online_friends:
+                friends_data.append({
+                    "username": friend['username'],
+                    "ip": friend['ip_address'] or '127.0.0.1',
+                    "port": friend['port'] or 0
+                })
+            
+            await self.send_response(DirectoryMsg(
+                data=json.dumps(friends_data)
+            ))
+            
+        except Exception as e:
+            logger.error(f"获取在线列表失败: {e}")
+            await self.send_error("获取在线列表失败")
+    
+    async def handle_send_message(self, msg: MessageMsg):
+        """处理发送消息"""
+        try:
+            if not self.username:
+                await self.send_error("未登录")
+                return
+            
+            user = self.db.get_user_by_username(self.username)
+            if not user:
+                await self.send_error("用户不存在")
+                return
+            
+            # 获取接收者信息
+            receiver_user = self.db.get_user_by_username(str(msg.dest_id))
+            if not receiver_user:
+                await self.send_error("接收者不存在")
+                return
+                
+            # 保存消息到数据库
+            message_id = self.db.save_message(
+                sender_id=user['user_id'],
+                receiver_id=receiver_user['user_id'],
+                message_content=msg.content,
+                message_type='text'
+            )
+            
+            # 使用历史记录模块保存
+            history.append_chatlog(
+                sender=self.username,
+                receiver=str(msg.dest_id),
+                payload_bytes=msg.content.encode('utf-8')
+            )
+            
+            logger.info(f"消息已发送: {self.username} -> {msg.dest_id}")
+            
+            # 尝试转发给在线的接收者
+            await self.forward_message_to_user(str(msg.dest_id), {
+                'tag': MsgTag.Message.value,
+                'message_id': msg.message_id,
+                'source_id': msg.source_id,
+                'dest_id': msg.dest_id,
+                'content': msg.content,
+                'time': msg.time
+            })
+            
+        except Exception as e:
+            logger.error(f"发送消息失败: {e}")
+            await self.send_error("发送消息失败")
+    
+    async def handle_fetch_history(self, msg: GetHistoryMsg):
+        """处理获取聊天历史"""
+        try:
+            if not self.username:
+                await self.send_error("未登录")
+                return
+            
+            # 使用历史记录模块获取聊天记录
+            chat_logs = history.read_chatlog(
+                user1=self.username,
+                user2=str(msg.chat_id),
+                limit=50
+            )
+            
+            # 转换为响应格式
+            messages_data = []
+            for timestamp_iso, sender, receiver, payload_bytes in chat_logs:
+                try:
+                    content = payload_bytes.decode('utf-8')
+                    messages_data.append({
+                        "timestamp": timestamp_iso,
+                        "sender": sender,
+                        "receiver": receiver,
+                        "content": content
+                    })
+                except UnicodeDecodeError:
+                    # 跳过无法解码的消息
+                    continue
+            
+            await self.send_response(HistoryMsg(
+                data=json.dumps(messages_data)
+            ))
+            
+        except Exception as e:
+            logger.error(f"获取聊天历史失败: {e}")
+            await self.send_error("获取聊天历史失败")
+    
+    async def handle_add_contact(self, user1: str, user2: str):
+        """处理添加联系人"""
+        try:
+            # 使用directory模块添加好友
+            success = directory.add_friend(user1, user2)
+            
+            if success:
+                await self.send_error(f"添加联系人成功: {user1} <-> {user2}")
+            else:
+                await self.send_error("添加联系人失败：已经是好友或被拉黑")
+            
+        except Exception as e:
+            logger.error(f"添加联系人失败: {e}")
+            await self.send_error("添加联系人失败")
+    
+    async def handle_logout(self):
+        """处理登出"""
+        try:
+            if self.username:
+                # 更新用户状态
+                user = self.db.get_user_by_username(self.username)
+                if user:
+                    self.db.update_user_login_status(user['user_id'], False)
+                
+                # 关闭会话
+                self.db.close_session(self.session_id)
+                
+                # 从在线列表移除
+                server_state.online_users.discard(self.username)
+                if self.username in server_state.user_sessions:
+                    del server_state.user_sessions[self.username]
+                
+                # 广播用户下线
+                await self.broadcast_user_status_change()
+                
+                logger.info(f"用户 {self.username} 登出")
+                self.username = None
+            
+        except Exception as e:
+            logger.error(f"登出处理失败: {e}")
+    
+    async def forward_message_to_user(self, target_username: str, message: dict):
+        """转发消息给目标用户"""
+        try:
+            if target_username in server_state.user_sessions:
+                session_id = server_state.user_sessions[target_username]
+                if session_id in server_state.connections:
+                    websocket = server_state.connections[session_id]
+                    await websocket.send(json.dumps(message))
+        except Exception as e:
+            logger.error(f"转发消息失败: {e}")
+    
+    async def broadcast_user_status_change(self):
+        """广播用户状态变化"""
+        try:
+            # 这里可以实现更复杂的广播逻辑
+            pass
+        except Exception as e:
+            logger.error(f"广播状态变化失败: {e}")
+    
+    async def send_response(self, response):
+        """发送响应"""
+        try:
+            if hasattr(response, 'dict'):
+                data = response.dict()
+            else:
+                data = response.__dict__
+            await self.websocket.send(json.dumps(data))
+        except Exception as e:
+            logger.error(f"发送响应失败: {e}")
+    
+    async def send_error(self, error_msg: str):
+        """发送错误消息"""
+        try:
+            error_response = {
+                'tag': MsgTag.Error.value,
+                'msg': error_msg,
+                'timestamp': datetime.now().isoformat()
+            }
+            await self.websocket.send(json.dumps(error_response))
+        except Exception as e:
+            logger.error(f"发送错误消息失败: {e}")
 
-async def connect_server() -> Tuple[StreamReader, StreamWriter]:
-    """建立到服务器的 TLS 流 — 步骤
+async def handle_client(websocket: WebSocketServerProtocol, path: str):
+    """处理客户端连接"""
+    session_id = str(uuid.uuid4())
+    server_state.connections[session_id] = websocket
+    
+    handler = MessageHandler(websocket, session_id)
+    
+    logger.info(f"新客户端连接: {session_id}")
+    
+    try:
+        async for raw_message in websocket:
+            try:
+                message = json.loads(raw_message)
+                await handler.handle_message(message)
+            except json.JSONDecodeError:
+                await handler.send_error("无效的JSON格式")
+            except Exception as e:
+                logger.error(f"处理消息失败: {e}")
+                await handler.send_error("消息处理失败")
+                
+    except ConnectionClosed:
+        logger.info(f"客户端连接关闭: {session_id}")
+    except Exception as e:
+        logger.error(f"连接处理失败: {e}")
+    finally:
+        # 清理连接
+        if session_id in server_state.connections:
+            del server_state.connections[session_id]
+        
+        # 处理登出
+        await handler.handle_logout()
 
-    1. 从 `common.config` 取服务器地址、端口、证书路径。
-    2. 调 `await open_tls(host, port, ca, cert, key)`（common.crypto_tls）。
-    3. 握手成功后返回 `(reader, writer)`。
-    4. 异常处理：连接超时 / 证书验证失败 → 向 UI 报错。
-    """
-    pass
+async def run_server(host: str = "0.0.0.0", port: int = 8765):
+    """启动服务器"""
+    logger.info(f"启动服务器: {host}:{port}")
+    
+    # 初始化数据库
+    server_state.db.init_database()
+    
+    # 启动WebSocket服务器
+    async with websockets.serve(handle_client, host, port):
+        logger.info(f"WebSocket服务器已启动，监听 {host}:{port}")
+        await asyncio.Future()  # 保持服务器运行
 
-
-async def server_recv_loop(reader: StreamReader) -> None:
-    """常驻协程：读取服务器推送 — 步骤
-
-    1. `while True:` 循环：
-       a. Read length-prefixed frame (`await reader.readexactly()`).
-       b. `json.loads` 解析。
-       c. 按 `type` 分流：
-          • online_list → 更新联系人在线状态
-          • friend_request → 通知 UI
-          • error → 弹窗 / 日志
-    2. 连接关闭 / 异常 → 通知 UI & 尝试重连 / 结束。
-    """
-    pass
-
-
-async def heartbeat_task(writer: StreamWriter, interval: int = 30) -> None:
-    """周期性心跳 — 步骤
-
-    1. `while True:`
-       a. 构造 JSON `{type:'heartbeat', ts:<unix>}`
-       b. `await send_packet(writer, packet_bytes)`
-       c. `await asyncio.sleep(interval)`
-    2. 捕获异常：连接丢失 → 退出协程，由上层重连策略处理。
-    """
-    pass
-
-# ======================================================================
-# 3. P2P 直连
-# ======================================================================
-
-async def p2p_connect(peer: UserEndpoint) -> P2PChannel:
-    """主动连接好友 — 步骤
-
-    1. 若 `_active_channels` 已存在 peer → 直接返回。
-    2. `ip, port = peer[1:]` → `await open_tls(ip, port, ca, cert, key)`
-       • 可尝试多协议：TCP+TLS / UDP+DTLS。
-    3. 握手完成后 → 注册 `_active_channels[peer_name] = (reader, writer)`
-    4. 为该通道创建 `messenger.recv_loop(reader, peer_name)` 常驻协程。
-    """
-    pass
-
-
-async def p2p_listener(bind_ip: str, bind_port: int) -> None:
-    """监听入站 P2P 连接 — 步骤
-
-    1. `server = await asyncio.start_server(handle_peer, bind_ip, bind_port, ssl=ssl_ctx)`
-    2. 在 `handle_peer(reader, writer)` 中：
-       a. TLS 已完成握手，可得对端证书/用户名。
-       b. 注册 `_active_channels`。
-       c. 启动 `messenger.recv_loop()`。
-    3. `await server.serve_forever()`
-    """
-    pass
-
-# ======================================================================
-# 4. 统一发送
-# ======================================================================
-
-async def send_packet(writer: StreamWriter, packet: bytes) -> None:
-    """发送数据帧 — 步骤
-
-    1. `length = len(packet).to_bytes(4, 'big')` 前缀。
-    2. `writer.write(length + packet)` 再 `await writer.drain()`。
-    3. 记录 debug 日志。
-    4. 捕获 `ConnectionResetError`, `BrokenPipeError` → 向上抛。
-    """
-    pass
-
-# ======================================================================
-# 5. 优雅退出
-# ======================================================================
-
-async def shutdown() -> None:
-    """关闭客户端 — 步骤
-
-    1. 遍历 `_background_tasks`：`task.cancel()` → `await` 抑制 `CancelledError`。
-    2. 向所有活跃 P2P writer 发送 close_notify / FIN 并关闭。
-    3. 通知服务器下线：如果 TLS 仍可用 → 发送 `{type:'offline'}`。
-    4. 关闭日志句柄、停止 UI。最后调用 `asyncio.get_running_loop().stop()`。
-    """
-    pass
-
-# ───────── End of client/core.py skeleton ─────────
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    asyncio.run(run_server()) 
