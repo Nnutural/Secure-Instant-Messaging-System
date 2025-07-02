@@ -1,0 +1,148 @@
+{
+    "contacts": [
+        {
+            "id": 1,
+            "name": "张三",
+            "avatar": "张",
+            "status": "online",
+            "preview": "周末聚会在哪里见面？",
+            "time": "11:30"
+        },
+        {
+            "id": 2,
+            "name": "李四",
+            "avatar": "李",
+            "status": "offline",
+            "preview": "项目计划已经发给你了",
+            "time": "昨天"
+        },
+        {
+            "id": 3,
+            "name": "王五",
+            "avatar": "王",
+            "status": "online",
+            "preview": "我大概晚上7点能到",
+            "time": "周二"
+        },
+        {
+            "id": 4,
+            "name": "赵六",
+            "avatar": "赵",
+            "status": "online",
+            "preview": "你推荐的电影我看了，很棒！",
+            "time": "周一"
+        },
+        {
+            "id": 5,
+            "name": "陈七",
+            "avatar": "陈",
+            "status": "online",
+            "preview": "在线"
+        },
+        {
+            "id": 6,
+            "name": "孙八",
+            "avatar": "孙",
+            "status": "offline",
+            "preview": "离线"
+        },
+        {
+            "id": 7,
+            "name": "周九",
+            "avatar": "周",
+            "status": "online",
+            "preview": "在线"
+        }
+    ],
+    "messages": {
+        "1": [
+            {
+                "date": "2023年11月3日",
+                "messages": [
+                    {
+                        "sender": "contact",
+                        "content": "嗨，周末的聚会计划定下来了吗？",
+                        "time": "10:25"
+                    },
+                    {
+                        "sender": "user",
+                        "content": "还没呢，你有什么建议？",
+                        "time": "10:26"
+                    },
+                    {
+                        "sender": "contact",
+                        "content": "我知道市中心新开了一家意大利餐厅，评价很不错",
+                        "time": "10:27"
+                    },
+                    {
+                        "sender": "user",
+                        "content": "听起来很棒！具体地址和名字是？",
+                        "time": "10:28"
+                    },
+                    {
+                        "sender": "contact",
+                        "content": "Bella Vita 意大利餐厅，在胜利路123号",
+                        "time": "10:30"
+                    },
+                    {
+                        "sender": "user",
+                        "content": "太好了，我会通知其他人。晚上7点怎么样？",
+                        "time": "10:32"
+                    },
+                    {
+                        "sender": "contact",
+                        "content": "没问题，周六见！",
+                        "time": "10:33"
+                    }
+                ]
+            },
+            {
+                "date": "今天",
+                "messages": [
+                    {
+                        "sender": "contact",
+                        "content": "周末聚会在哪里见面？需要我发定位吗？",
+                        "time": "10:45"
+                    }
+                ]
+            },
+            {
+                "date": "2025/7/2",
+                "messages": [
+                    {
+                        "sender": "user",
+                        "content": "和",
+                        "time": "15:00"
+                    },
+                    {
+                        "sender": "user",
+                        "content": "你说呢",
+                        "time": "15:00"
+                    },
+                    {
+                        "sender": "user",
+                        "content": "好的",
+                        "time": "15:04"
+                    }
+                ]
+            }
+        ],
+        "2": [
+            {
+                "date": "2023年11月2日",
+                "messages": [
+                    {
+                        "sender": "contact",
+                        "content": "项目计划已经发给你了",
+                        "time": "09:30"
+                    },
+                    {
+                        "sender": "user",
+                        "content": "收到，我下午看完给你反馈",
+                        "time": "09:32"
+                    }
+                ]
+            }
+        ]
+    }
+}

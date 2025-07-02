@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 短信应用</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+    <div class="desktop-app">
+        <!-- 标题栏 -->
+        <div class="title-bar">
+            <div class="window-title">
+                <i class="fas fa-comments"></i>
+                <span>Windows 短信</span>
+            </div>
+            <div class="window-controls">
+                <div class="window-btn minimize"><i class="fas fa-minus"></i></div>
+                <div class="window-btn maximize"><i class="far fa-square"></i></div>
+                <div class="window-btn close"><i class="fas fa-times"></i></div>
+            </div>
+        </div>
+        
+        <!-- 应用主体 -->
+        <div class="app-container">
+            <!-- 左侧联系人列表 -->
+            <div class="sidebar">
+                <div class="search-box">
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="搜索联系人..." id="search-contacts">
+                    </div>
+                </div>
+                
+                <div class="contact-list" id="contact-list">
+                    <!-- 联系人将通过JSON动态加载 -->
+                </div>
+            </div>
+            
+            <!-- 右侧聊天区域 -->
+            <div class="chat-area">
+                <!-- 聊天头部 -->
+                <div class="chat-header">
+                    <div class="chat-avatar" id="current-contact-avatar">?</div>
+                    <div class="chat-info">
+                        <div class="chat-name" id="current-contact-name">选择联系人</div>
+                        <div class="chat-status" id="current-contact-status">离线</div>
+                    </div>
+                    <div class="chat-actions">
+                        <div class="chat-action"><i class="fas fa-phone-alt"></i></div>
+                        <div class="chat-action"><i class="fas fa-video"></i></div>
+                        <div class="chat-action"><i class="fas fa-info-circle"></i></div>
+                    </div>
+                </div>
+                
+                <!-- 消息区域 -->
+                <div class="messages-container">
+                    <div id="message-history">
+                        <!-- 消息历史将通过JSON动态加载 -->
+                    </div>
+                    <div id="new-messages"></div>
+                </div>
+                
+                <!-- 输入区域 -->
+                <div class="input-area">
+                    <div class="input-actions">
+                        <div class="input-action"><i class="fas fa-paperclip"></i></div>
+                        <div class="input-action"><i class="far fa-smile"></i></div>
+                        <div class="input-action"><i class="fas fa-microphone"></i></div>
+                    </div>
+                    <textarea class="message-input" placeholder="输入消息..." id="message-input"></textarea>
+                    <button class="send-button" id="send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 深色/浅色主题切换 -->
+        <div class="theme-toggle" id="theme-toggle">
+            <div class="theme-knob"></div>
+        </div>
+    </div>
+
+    <!-- 数据文件将通过app.js动态加载 -->
+    <script src="data.json"></script>
+    <script src="app.js"></script>
+</body>
+</html>

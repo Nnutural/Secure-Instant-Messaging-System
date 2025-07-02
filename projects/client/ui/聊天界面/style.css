@@ -1,0 +1,587 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background: #2d2d2d;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    color: #f0f0f0;
+}
+
+.desktop-app {
+    width: 1000px;
+    height: 700px;
+    background: rgba(50, 50, 50, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* 标题栏 - Windows 11风格 */
+.title-bar {
+    height: 42px;
+    background: rgba(45, 45, 45, 0.85);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    -webkit-app-region: drag;
+    user-select: none;
+}
+
+.window-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    font-size: 14px;
+    color: #f0f0f0;
+}
+
+.window-title i {
+    font-size: 18px;
+    color: #4da2f0;
+}
+
+.window-controls {
+    display: flex;
+    gap: 8px;
+    -webkit-app-region: no-drag;
+}
+
+.window-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ccc;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.window-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.window-btn.close:hover {
+    background: #e81123;
+    color: white;
+}
+
+/* 应用主体 */
+.app-container {
+    display: flex;
+    height: calc(100% - 42px);
+}
+
+/* 侧边栏 - 联系人列表 */
+.sidebar {
+    width: 320px;
+    background: rgba(40, 40, 40, 0.6);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+/* 搜索区域 */
+.search-box {
+    padding: 16px;
+    position: relative;
+}
+
+.search-container {
+    background: rgba(70, 70, 70, 0.4);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+}
+
+.search-container i {
+    font-size: 16px;
+    color: #aaa;
+    margin-right: 10px;
+}
+
+.search-container input {
+    background: transparent;
+    border: none;
+    color: #f0f0f0;
+    outline: none;
+    font-size: 14px;
+    width: 100%;
+}
+
+.search-container input::placeholder {
+    color: #888;
+}
+
+/* 联系人列表 */
+.contact-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px;
+}
+
+.contact-header {
+    color: #888;
+    font-size: 12px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    margin-top: 10px;
+    letter-spacing: 0.5px;
+}
+
+.contact-item {
+    display: flex;
+    gap: 15px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    align-items: center;
+}
+
+.contact-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.contact-item.active {
+    background: rgba(77, 162, 240, 0.2);
+}
+
+.contact-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4da2f0, #6a60f0);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    font-size: 18px;
+    color: white;
+    position: relative;
+}
+
+.contact-status {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #8bc34a;
+    border: 2px solid rgba(40, 40, 40, 0.8);
+}
+
+.status-offline {
+    background: #aaa !important;
+}
+
+.contact-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.contact-name {
+    font-weight: 500;
+    font-size: 15px;
+    color: #f0f0f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contact-preview {
+    font-size: 13px;
+    color: #aaa;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contact-time {
+    font-size: 12px;
+    color: #777;
+    white-space: nowrap;
+}
+
+/* 聊天区域 */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 聊天头部 */
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 15px;
+}
+
+.chat-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff9500, #ff3a67);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    font-size: 18px;
+    color: white;
+}
+
+.chat-info {
+    flex: 1;
+}
+
+.chat-name {
+    font-weight: 500;
+    font-size: 16px;
+    color: #f0f0f0;
+}
+
+.chat-status {
+    font-size: 13px;
+    color: #8bc34a;
+    margin-top: 2px;
+}
+
+.chat-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.chat-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #aaa;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chat-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f0f0f0;
+}
+
+/* 消息区域 */
+.messages-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: rgba(30, 30, 30, 0.3);
+}
+
+.message-day {
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    margin: 15px 0;
+    position: relative;
+}
+
+.message-day::before,
+.message-day::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 30px);
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.message-day::before {
+    left: 0;
+}
+
+.message-day::after {
+    right: 0;
+}
+
+.message-bubble {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    margin-bottom: 15px;
+    position: relative;
+    animation: fadeIn 0.3s ease;
+    line-height: 1.5;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message-receive {
+    align-self: flex-start;
+    background: rgba(80, 80, 80, 0.6);
+    border-top-left-radius: 4px;
+    color: #f0f0f0;
+}
+
+.message-sent {
+    align-self: flex-end;
+    background: rgba(77, 162, 240, 0.3);
+    border-top-right-radius: 4px;
+    color: white;
+}
+
+.message-time {
+    font-size: 11px;
+    margin-top: 5px;
+    opacity: 0.7;
+    text-align: right;
+}
+
+/* 输入区域 */
+.input-area {
+    padding: 16px;
+    background: rgba(45, 45, 45, 0.7);
+    display: flex;
+    gap: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.input-actions {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.input-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #aaa;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.input-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f0f0f0;
+}
+
+.message-input {
+    flex: 1;
+    background: rgba(65, 65, 65, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    padding: 12px 18px;
+    outline: none;
+    color: #f0f0f0;
+    font-size: 14px;
+    resize: none;
+    min-height: 24px;
+    max-height: 120px;
+    line-height: 1.5;
+    scrollbar-width: thin;
+    scrollbar-color: #4da2f0 transparent;
+}
+
+.message-input::placeholder {
+    color: #888;
+}
+
+.send-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #4da2f0;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: none;
+    outline: none;
+}
+
+.send-button:hover {
+    background: #3b92e0;
+}
+
+.send-button:disabled {
+    background: #666;
+    cursor: default;
+}
+
+/* 响应式调整 */
+@media (max-width: 1000px) {
+    .desktop-app {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(30, 30, 30, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(90, 90, 90, 0.6);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4da2f0;
+}
+
+/* Windows主题切换 */
+.theme-toggle {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 48px;
+    height: 24px;
+    background: #444;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    cursor: pointer;
+    z-index: 100;
+}
+
+.theme-knob {
+    width: 20px;
+    height: 20px;
+    background: #4da2f0;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+}
+
+.light .theme-knob {
+    transform: translateX(24px);
+    background: #f0c420;
+}
+
+.light body {
+    background: #e0e0e0;
+}
+
+.light .desktop-app {
+    background: rgba(250, 250, 250, 0.6);
+    color: #333;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.light .title-bar {
+    background: rgba(245, 245, 245, 0.85);
+    color: #333;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.light .window-title {
+    color: #333;
+}
+
+.light .sidebar {
+    background: rgba(240, 240, 240, 0.8);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.light .contact-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.light .contact-item.active {
+    background: rgba(77, 162, 240, 0.15);
+}
+
+.light .contact-name,
+.light .chat-name {
+    color: #222;
+}
+
+.light .contact-preview {
+    color: #666;
+}
+
+.light .chat-action {
+    color: #666;
+}
+
+.light .chat-action:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #222;
+}
+
+.light .messages-container {
+    background: rgba(240, 240, 245, 0.4);
+}
+
+.light .message-receive {
+    background: rgba(255, 255, 255, 0.9);
+    color: #222;
+}
+
+.light .message-sent {
+    background: rgba(77, 162, 240, 0.2);
+    color: #222;
+}
+
+.light .input-area {
+    background: rgba(245, 245, 245, 0.8);
+}
+
+.light .input-action {
+    color: #666;
+}
+
+.light .message-input {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+
+.light .search-container {
+    background: rgba(220, 220, 220, 0.4);
+}
+
+.light .search-container input {
+    color: #333;
+}
