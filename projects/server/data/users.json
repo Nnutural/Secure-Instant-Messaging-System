@@ -1,16 +1,12 @@
-// 作用：注册表。保存 每个账号的静态信息 与 身份验证材料。
-// 生命周期：只在 注册 / 修改密码 / 更新证书 时写入；登录、上线、好友查询均只读。
 [
   {
-    "username"   : "alice",                    // 唯一用户名 (主键)
-    "email"      : "alice@example.com",
-    "salt"       : "b3d9f7ed…",                // 随机 16-32B，Base64
-    "pass_hash"  : "1f7ab0f127…",              // PBKDF2-HMAC(SHA256, pw, salt, 100k)
-    "pubkey_pem" : "-----BEGIN PUBLIC KEY-----\nMIIBIj…\n-----END PUBLIC KEY-----",
-    "cert_sha256": "75c1be24…",                // 客户端 X.509 证书指纹 (Hex) — 若启用双向 TLS
-    "created_at" : "2025-06-28T10:21:12Z",
-    "revoked"    : false                       // 账号是否被封禁
+    "username": "test_user",
+    "email": "test@example.com",
+    "salt": "yP5SwhLMqYy6DKgs6UhNQA==",
+    "pass_hash": "wEv3wqRV7AQRg+tGz4jNx91Bw1VfdNSzeoL+C323+ho=",
+    "pubkey_pem": "",
+    "cert_sha256": "",
+    "created_at": "2025-07-02T09:16:21.786711Z",
+    "revoked": false
   }
-
-  /* , { … 其他用户 … } */
 ]
