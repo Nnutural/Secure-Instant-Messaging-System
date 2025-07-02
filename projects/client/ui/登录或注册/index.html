@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>用户登录注册</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="login">登录</div>
+            <div class="tab" data-tab="register">注册</div>
+        </div>
+
+        <div class="form-container">
+            <!-- 登录表单 -->
+            <div class="form active" id="login-form">
+                <div class="input-group">
+                    <input type="text" id="login-username" placeholder="用户名" required />
+                    <div class="error" id="login-username-error"></div>
+                </div>
+
+                <div class="input-group">
+                    <input type="password" id="login-password" placeholder="密码" required />
+                    <span class="password-toggle" id="login-password-toggle">👁️</span>
+                    <div class="error" id="login-password-error"></div>
+                </div>
+
+                <div class="options">
+                    <div class="remember">
+                        <input type="checkbox" id="remember" />
+                        <label for="remember">记住我</label>
+                    </div>
+                    <a href="#" class="forgot-password">忘记密码?</a>
+                </div>
+
+                <button class="btn" id="login-btn">登录</button>
+
+                <div class="switch-form">
+                    没有账号? <a href="#" data-switch="register">立即注册</a>
+                </div>
+            </div>
+
+            <!-- 注册表单 -->
+            <div class="form" id="register-form">
+                <div class="input-group">
+                    <input type="text" id="register-username" placeholder="设置用户名 (6-20位字母数字)" required />
+                    <div class="error" id="register-username-error"></div>
+                </div>
+
+                <div class="input-group">
+                    <input type="password" id="register-password" placeholder="设置密码 (8-20位，含大小写和数字)" required />
+                    <span class="password-toggle" id="register-password-toggle">👁️</span>
+                    <div class="error" id="register-password-error"></div>
+                </div>
+
+                <div class="input-group">
+                    <input type="password" id="confirm-password" placeholder="确认密码" required />
+                    <div class="error" id="confirm-password-error"></div>
+                </div>
+
+                <button class="btn" id="register-btn">注册</button>
+
+                <div class="switch-form">
+                    已有账号? <a href="#" data-switch="login">立即登录</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
